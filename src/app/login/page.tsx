@@ -8,31 +8,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('admin@centralhospital.com')
+  const [password, setPassword] = useState('password123')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const { login, loading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
 
     try {
-      // Simulate login - replace with actual API call
-      if (email === 'admin@centralhospital.com' && password === 'password123') {
-        localStorage.setItem('authToken', 'demo-token')
-        router.push('/dashboard')
-      } else {
-        setError('Invalid credentials')
-      }
-    } catch (err) {
-      setError('Login failed')
-    } finally {
-      setLoading(false)
+      await login(email, password)
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
     }
   }
 

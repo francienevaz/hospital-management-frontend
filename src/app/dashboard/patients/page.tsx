@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Edit, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Eye, Edit, MoreHorizontal, AlertCircle, Trash2 } from 'lucide-react'
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { patientsAPI } from '@/lib/api'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 interface Patient {
@@ -23,44 +25,32 @@ interface Patient {
   phone: string
   email?: string
   medicalRecordNumber?: string
-  status: 'active' | 'inactive'
+  hospitalId?: string
+  createdAt: string
+  updatedAt: string
 }
 
-const mockPatients: Patient[] = [
-  {
-    id: '1',
-    fullName: 'Carlos Oliveira',
-    cpf: '123.456.789-00',
-    birthDate: '1985-05-15',
-    phone: '(11) 99999-9999',
-    email: 'carlos@email.com',
-    medicalRecordNumber: 'MRN001',
-    status: 'active'
-  },
-  {
-    id: '2',
-    fullName: 'Ana Costa',
-    cpf: '987.654.321-00',
-    birthDate: '1990-08-22',
-    phone: '(11) 88888-8888',
-    email: 'ana@email.com',
-    medicalRecordNumber: 'MRN002',
-    status: 'active'
-  },
-  {
-    id: '3',
-    fullName: 'Pedro Almeida',
-    cpf: '456.789.123-00',
-    birthDate: '1978-12-10',
-    phone: '(11) 77777-7777',
-    medicalRecordNumber: 'MRN003',
-    status: 'inactive'
-  },
-]
-
-export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>(mockPatients)
+function PatientsContent() {
+  const [patients, setPatients] = useState<Patient[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadPatients()
+  }, [])
+
+  const loadPatients = async () => {
+    try {
+      const response = await patientsAPI.getAll()
+      setPatients(response.data)
+    } catch (err: any) {
+      setError('Failed to load patients')
+      console.error('Error loading patients:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredPatients = patients.filter(patient =>
     patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,12 +62,25 @@ export default function PatientsPage() {
     return new Date(dateString).toLocaleDateString('pt-BR')
   }
 
-  const getStatusVariant = (status: string) => {
-    return status === 'active' ? 'default' : 'secondary'
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Patients</h1>
+            <p className="text-muted-foreground">Loading patients...</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">Loading patients...</div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <ProtectedRoute>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -86,11 +89,20 @@ export default function PatientsPage() {
             Manage patient records and information
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Patient
+        <Button asChild>
+          <Link href="/dashboard/patients/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Patient
+          </Link>
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -122,7 +134,7 @@ export default function PatientsPage() {
                 <TableHead>Birth Date</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Medical Record</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -133,12 +145,8 @@ export default function PatientsPage() {
                   <TableCell>{patient.cpf}</TableCell>
                   <TableCell>{formatDate(patient.birthDate)}</TableCell>
                   <TableCell>{patient.phone}</TableCell>
-                  <TableCell>{patient.medicalRecordNumber}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(patient.status)}>
-                      {patient.status}
-                    </Badge>
-                  </TableCell>
+                  <TableCell>{patient.medicalRecordNumber || '-'}</TableCell>
+                  <TableCell>{formatDate(patient.createdAt)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -147,15 +155,29 @@ export default function PatientsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/patients/${patient.id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to delete this patient?')) {
+                            try {
+                              await patientsAPI.delete(patient.id)
+                              loadPatients() // Recarrega a lista
+                            } catch (err: any) {
+                              setError('Failed to delete patient')
+                            }
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
@@ -165,12 +187,19 @@ export default function PatientsPage() {
 
           {filteredPatients.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No patients found matching your search.
+              {patients.length === 0 ? 'No patients found. Create your first patient!' : 'No patients found matching your search.'}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function PatientsPage() {
+  return (
+    <ProtectedRoute>
+      <PatientsContent />
     </ProtectedRoute>
   )
 }
