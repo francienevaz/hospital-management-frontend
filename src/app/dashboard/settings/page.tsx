@@ -9,12 +9,34 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Save, Bell, Shield, Users, Database, Globe } from 'lucide-react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { useTheme } from '@/hooks/useTheme'
 
-// Add Switch and Select components if not already added
-// npx shadcn@latest add switch
-// npx shadcn@latest add select
 
 export default function SettingsPage() {
+  const { theme, setTheme, mounted } = useTheme()
+
+  if (!mounted) {
+    return (
+      <ProtectedRoute>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+              <p className="text-muted-foreground">
+                Manage your hospital system settings and preferences
+              </p>
+            </div>
+          </div>
+          {/* Loading skeleton */}
+          <div className="animate-pulse space-y-6">
+            <div className="h-32 bg-muted rounded-lg"></div>
+            <div className="h-48 bg-muted rounded-lg"></div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
   return (
     <ProtectedRoute>
     <div className="space-y-6">
@@ -91,7 +113,41 @@ export default function SettingsPage() {
                     Enable dark mode theme
                   </div>
                 </div>
-                <Switch />
+                 <Switch
+                  id="dark-mode"
+                  checked={theme === 'dark'}
+                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>System Theme</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Follow your system theme preference
+                  </div>
+                </div>
+                <Switch
+                  checked={theme === 'system'}
+                  onCheckedChange={(checked) => setTheme(checked ? 'system' : 'light')}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Theme Selection</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Choose your preferred theme
+                  </div>
+                </div>
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
